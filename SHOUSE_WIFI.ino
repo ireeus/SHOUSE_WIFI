@@ -1,7 +1,6 @@
 //#include <SparkFunESP8266Client.h>
 #include <SparkFunESP8266Server.h>
 #include <SparkFunESP8266WiFi.h>
-
 #include <SoftwareSerial.h>
 
 //#include <SPI.h>
@@ -31,7 +30,7 @@ float tempC2;                           //Temperature sensor 1
 int tempPin1 = A0;                      //Temperature sensor 1
 int tempPin2 = A1;
 int ledPin = 13;
-int fan1 = 5;
+int fan1 = 5;                           // Fan controll if needed
 const char* SSID = mySSID;
 
 
