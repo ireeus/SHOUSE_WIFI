@@ -1,173 +1,161 @@
-//#include <SparkFunESP8266Client.h>
-#include <SparkFunESP8266Server.h>
-#include <SparkFunESP8266WiFi.h>
-#include <SoftwareSerial.h>
+ /*
+  Web client
 
-//#include <SPI.h>
-//#include <Ethernet.h>
-//#include <WiFiClient.h>
-///#include <HttpClient.h>
-//#include <Bridge.h>
+ This sketch connects to a website (http://www.google.com)
+ using a WiFi shield.
 
+ This example is written for a network using WPA encryption. For
+ WEP or WPA, change the WiFi.begin() call accordingly.
+
+ This example is written for a network using WPA encryption. For
+ WEP or WPA, change the WiFi.begin() call accordingly.
+
+ Circuit:
+ * WiFi shield attached
+
+ created 13 July 2010
+ by dlf (Metodo2 srl)
+ modified 31 May 2012
+ by Tom Igoe
+ */
+
+
+#include <SPI.h>
+#include <WiFi101.h>
+#include "arduino_secrets.h" 
+///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+char ssid[] = SECRET_SSID;        // your network SSID (name)
+char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
+int keyIndex = 0;            // your network key Index number (needed only for WEP)
 //////////////////////////////////////////////////////
 
 // Arduino ID also used as an user to login to website
-char MyID[] = "aaaa";
+char MyID[] = "bbbb";                       //id of the station
+char Host[] = "HOST: 81.110.5.170"; 
 
-// PHP server with mysql data insertion
-char server[] = "82.28.186.219/";
-char host[] = "Host: 82.28.186.219/";
+int sensorPin1 = 0;       
+int sensorPin2 = 1;   
+                        
+///////////////////////////////////////////////////////////////////////////////////////////
 
-//WiFi network .
-const char mySSID[] = "";
-const char myPSK[] = "";
+int status = WL_IDLE_STATUS;
+// if you don't want to use DNS (and reduce your sketch size)
+// use the numeric IP instead of the name for the server:
+IPAddress server(81,110,5,177);  // numeric IP for Google (no DNS)
+//char server[] = "www.google.com";    // name address for Google (using DNS)
 
-//////////////////////////////////////////////////////
+// Initialize the Ethernet client library
+// with the IP address and port of the server
+// that you want to connect to (port 80 is default for HTTP):
+WiFiClient client;
 
-ESP8266Client client = ESP8266Client(80);
-float tempC1;                           //Temperature sensor 1
-float tempC2;                           //Temperature sensor 1
-int tempPin1 = A0;                      //Temperature sensor 1
-int tempPin2 = A1;
-int ledPin = 13;
-int fan1 = 5;                           // Fan controll if needed
-const char* SSID = mySSID;
+void setup() {
+  //Configure pins for Adafruit ATWINC1500 Breakout
+WiFi.setPins(8,7,4);
+
+  //Initialize serial and wait for port to open:
+  Serial.begin(9600);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
+  }
+
+  // check for the presence of the shield:
+  if (WiFi.status() == WL_NO_SHIELD) {
+    Serial.println("WiFi shield not present");
+    // don't continue:
+    while (true);
+  }
+
+  // attempt to connect to WiFi network:
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
+    status = WiFi.begin(ssid, pass);
+
+    // wait 10 seconds for connection:
+    delay(10000);
+  }
+ 
+  Serial.println("Connected to wifi");
+  printWiFiStatus();
 
 
+}
 void connect() {
+ //getting the voltage reading from the temperature sensor
+ int reading1 = analogRead(sensorPin1);  
+ int reading2 = analogRead(sensorPin2);
+ 
+ // converting that reading to voltage
+ float voltage1 = reading1 * 5.0;
+ voltage1 /= 1024.0; 
+  float voltage2 = reading2 * 5.0;
+ voltage2 /= 1024.0; 
+ 
+ // print out the voltage
+ Serial.print(voltage1); Serial.println(" volts1");
+ Serial.print(voltage2); Serial.println(" volts2");
+ 
+ // now print out the temperature
+ float tempC1 = (voltage1 - 0.5) * 100 ;  //converting from 10 mv per degree wit 500 mV offset
+ float tempC2 = (voltage2 - 0.5) * 100 ;                                              //to degrees ((voltage - 500mV) times 100)
+ Serial.print(tempC1); Serial.println(" *C");
+ Serial.print(tempC2); Serial.println(" *C");
+
+
+
   if (client.connect(server, 80)) {
-    Serial.print("Make a HTTP request ... ");
     client.print("GET /sh/recive_data.php");
     client.print("?un=");
     client.print(MyID);                               //Post The Serial Number
     client.print("&ti=");
-    client.print(tempC1);                           //Post The Temperature
+    client.print(tempC2);                           //Post The Temperature
     client.print("&to=");
-    client.print(tempC2);
+    client.print(tempC1);
     client.println(" HTTP/1.0");
-    client.println("HOST: 82.28.186.219");
+    client.println(Host);
     client.println();
-    Serial.println("ok");
+    Serial.println(voltage1);
+      Serial.println(voltage2);
   }
-  else {                                              //If Arduino Can't Connect To The Server
-    Serial.println("TRANSMITION FAILED");             //Serial Debug Output To Confirm Connection Failure
+  else {
+    // if you didn't get a connection to the server:
+    Serial.println("connection failed");
   }
+
 }
 
-void setup ()
-{
-  Serial.begin(9600);
-  // Serial Monitor is used to control the demo and view
-  // debug information.
-  Serial.begin(9600);
-  pinMode(ledPin, OUTPUT);
-  pinMode(fan1, OUTPUT);
-  if (esp8266.begin()) // Initialize the ESP8266 and check it's return status
-    Serial.println("ESP8266 ready to go!"); // Communication and setup successful
-  else
-    Serial.println("Unable to communicate with the ESP8266 :(");
-  int retVal;
 
-  // Wait for connection
-
-  retVal = esp8266.connect(mySSID, myPSK);
-  if (retVal < 0)
-  {
-    Serial.print(F("Error connecting: "));
-    Serial.println(retVal);
-  } else {
-    Serial.print(F("Connected "));
-    Serial.println(retVal);
-    // Print your WiFi shield's IP address
-    IPAddress ip = esp8266.localIP();
-    Serial.print("IP Address: ");
-    Serial.println(ip);
-  }
-  //signal
-  unsigned long before = millis();
-  //  int32_t rssi = getRSSI(SSID);
-  unsigned long after = millis();
-  // Serial.print("Signal strength: ");
-  //  Serial.print(rssi);
-  //Serial.println("dBm");
-
-  //Serial.print("Took ");
-  //Serial.print(after - before);
-  // Serial.println("ms");
-  //delay(1000);
-
-  connect();
-}
-
-void loop()
-{
-  if (client.available()) {
+void loop() {
+if (client.available()) {
     char c = client.read();
     Serial.print(c);
-  }                   //Routine To Post To The Server
-  int retVal;
-  retVal = esp8266.connect(mySSID, myPSK);
-
-  tempC1 = analogRead(tempPin1);
-  Serial.print("------------------------------------");
-  Serial.println();
-  Serial.print("sens_1: ");
-  Serial.print(tempC1, 1);
-  tempC1 = (5.0 * tempC1 * 100.0) / 1024.0;
-  Serial.print("    |");
-
-  tempC2 = analogRead(tempPin2);
-  Serial.print("  ");
-  Serial.print(" sens_2: ");
-  Serial.print(tempC2, 1);
-  tempC2 = (5.0 * tempC2 * 100.0) / 1024.0;
-
-  Serial.println();
-  Serial.print("Temp_1: ");
-  Serial.print(tempC1, 1); // one decimal place
-  Serial.print("°C  |   Temp_2: ");
-  Serial.print(tempC2, 1);
-  Serial.print("°C");
-  //Serial.print("Unable to connect");
-  // printing data posted to the server
-  Serial.println();
-  Serial.print(server);
-  Serial.print("recive_data.php?");
-  Serial.print("un=");                         //Post The Serial Number
-  Serial.print(MyID);
-  Serial.print("&ti=");                           //Post The Temperature
-  Serial.print(tempC1);
-  Serial.print("&to=");                           //Post The Humidty
-  Serial.print(tempC2);
-  Serial.println();
-
-  if (retVal > 0)
-  { Serial.print("Connected");
-    Serial.println();
-  } else {
-    Serial.print("Disconnected");
-    Serial.println();
+    // Serial.println("");
   }
 
-  if (tempC1 == 0 || tempC2 == 0) // if 1 or 2 is >25C
-
-  {
-    Serial.print("too cold");
+  // if the server's disconnected, stop the client:
+  if (!client.connected()) {
+    client.stop();
+    delay(6000);
+    connect();
   }
-  Serial.println();
+}
 
-  if (tempC1 > 27 || tempC2 > 23) // if 1 or 2 is >25C
-  {
-    digitalWrite(ledPin, LOW);
-    digitalWrite(fan1, LOW);
-  }
-  else
-  {
-    digitalWrite(ledPin, HIGH);
-    digitalWrite(fan1, HIGH);
-  }
 
-  //  HttpClient client;
-  connect();
-  delay(2000);
+void printWiFiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
 }
