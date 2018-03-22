@@ -35,6 +35,9 @@ char Host[] = "HOST: 81.110.5.170";
 
 int sensorPin1 = 0;       
 int sensorPin2 = 1;   
+const int ledPin =  13; 
+
+//pinMode(ledPin, OUTPUT);
                         
 ///////////////////////////////////////////////////////////////////////////////////////////
 
@@ -118,30 +121,53 @@ void connect() {
     client.println(" HTTP/1.0");
     client.println(Host);
     client.println();
-    //Serial.println(voltage1);
-    //Serial.println(voltage2);
+
+  }
+  else {
+    // if you didn't get a connection to the server:
+    Serial.println("connection failed");
+  }
+  //status request
+  if (client.connect(server, 80)) {
+    client.print("GET /sh/status_request.php");
+    client.print("?user=");
+    client.print(MyID);   
+    client.println(" HTTP/1.0");
+    client.println(Host);
+    client.println();
+
   }
   else {
     // if you didn't get a connection to the server:
     Serial.println("connection failed");
   }
 
+
+
 }
+
 
 
 void loop() {
 if (client.available()) {
     char c = client.read();
     Serial.print(c);
+    
+digitalWrite(ledPin, atoi(c)); 
+
+
     // Serial.println("");
   }
 
+  // while(true);
+   
   // if the server's disconnected, stop the client:
   if (!client.connected()) {
     client.stop();
-    delay(6000);
+    delay(1000);
     connect();
   }
+  
 }
 
 
